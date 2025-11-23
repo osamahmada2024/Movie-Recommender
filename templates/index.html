@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>AI Cinema | Next Gen Recommendations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Cairo:wght@400;600;800;900&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            cairo: ['Cairo', 'sans-serif'],
+          },
+          colors: {
+            'neon-primary': '#a855f7',
+            'neon-secondary': '#3b82f6',
+            'dark-bg': '#030014',
+          },
+          animation: {
+            'blob': 'blob 7s infinite',
+            'fade-in': 'fadeIn 0.8s ease-out forwards',
+            'slide-up': 'slideUp 0.8s ease-out forwards',
+            'pulse-soft': 'pulseSoft 2s infinite',
+          },
+          keyframes: {
+            blob: {
+              '0%': { transform: 'translate(0px, 0px) scale(1)' },
+              '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+              '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+              '100%': { transform: 'translate(0px, 0px) scale(1)' },
+            },
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            slideUp: { '0%': { opacity: '0', transform: 'translateY(40px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            pulseSoft: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.7' } }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { background-color: #030014; color: #ffffff; overflow-x: hidden; }
+    .bg-grid {
+      background-size: 50px 50px;
+      background-image: 
+        linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+      mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #c084fc 0%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(192,132,252,0.3);  
+    }
+    .glass-panel {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+    }
+    .glass-input {
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.4s ease;
+    }
+    .glass-input:focus-within {
+      border-color: #a855f7;
+      box-shadow: 0 0 25px rgba(168,85,247,0.35);
+      background: rgba(0,0,0,0.6);
+    }
+    .custom-dropdown {
+      max-height: 60vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #a855f7 #1a1a1a;
+    }
+    .custom-dropdown::-webkit-scrollbar { width: 6px; }
+    .custom-dropdown::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 8px; }
+    .custom-dropdown::-webkit-scrollbar-thumb { background: #a855f7; border-radius: 8px; }
+    .movie-card {
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .movie-card:hover {
+      transform: translateY(-12px) scale(1.04);
+      box-shadow: 0 25px 50px -12px rgba(168,85,247,0.25);
+      border-color: rgba(168,85,247,0.4);
+    }
+    .movie-card:hover img { transform: scale(1.08); }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #030014; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #a855f7; }
+
+    .movie-card img {
+      background: linear-gradient(45deg, #1a1a2e, #16213e) !important;
+      transition: all 0.5s ease;
+    }
+    
+    .movie-card img.loaded {
+      background: transparent !important;
+    }
+    
+    .movie-card img:not([src]), 
+    .movie-card img[src=""],
+    .movie-card img[src*="placeholder"] {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      position: relative;
+    }
+    
+    .movie-card img:not([src])::after,
+    .movie-card img[src=""]::after,
+    .movie-card img[src*="placeholder"]::after {
+      content: "🎬";
+      font-size: 2rem;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .image-loading {
+      background: linear-gradient(45deg, #1a1a2e, #16213e) !important;
+      filter: blur(4px);
+      animation: pulseSoft 2s infinite;
+    }
+    
+    .image-error {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    
+    .image-error::after {
+      content: "🎬 Film";
+      color: white;
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.2rem;
+      font-weight: bold;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    @media (max-width: 640px) {
+      .hero-title { font-size: 3rem !important; line-height: 1.1 !important; }
+      .hero-subtitle { font-size: 1rem !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-neon-primary selection:text-white relative">
+
+  <!-- Animated Background Blobs -->
+  <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+    <div class="absolute top-0 left-1/4 w-80 h-80 md:w-96 md:h-96 bg-purple-600/20 rounded-full mix-blend-screen blur-[100px] animate-blob"></div>
+    <div class="absolute top-0 right-1/4 w-80 h-80 md:w-96 md:h-96 bg-blue-600/20 rounded-full mix-blend-screen blur-[100px] animate-blob animation-delay-2000"></div>
+    <div class="absolute -bottom-32 left-1/3 w-80 h-80 md:w-96 md:h-96 bg-pink-600/20 rounded-full mix-blend-screen blur-[100px] animate-blob animation-delay-4000"></div>
+    <div class="absolute inset-0 bg-grid"></div>
+  </div>
+
+  <!-- Navbar - FIXED PROPERLY -->
+  <nav class="w-full px-4 sm:px-6 py-4 flex justify-between items-center z-50 sticky top-0 glass-panel border-t-0 border-x-0 backdrop-blur-xl">
+    <div class="flex items-center gap-3 group">
+      <div class="absolute -inset-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full opacity-0 group-hover:opacity-30 blur-xl transition duration-500"></div>
+      <a href="index.html" class="relative text-2xl sm:text-3xl font-black tracking-tighter font-cairo cursor-pointer select-none hover:text-purple-300 transition-colors duration-300">
+        AI <span class="gradient-text">CINEMA</span>
+      </a>
+    </div>
+
+    <div class="hidden md:flex items-center gap-8 text-sm font-bold text-gray-400">
+      <a href="index.html" class="hover:text-white transition cursor-pointer select-none hover:text-purple-300 duration-300">HOME</a>
+      <a href="https://github.com/osamahmada2024" target="_blank" rel="noopener noreferrer"
+         class="px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold text-xs hover:shadow-2xl hover:shadow-purple-500/50 transition cursor-pointer select-none transform hover:scale-105 duration-300">
+        GitHub
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="flex-grow flex flex-col items-center justify-start pt-8 sm:pt-12 lg:pt-20 px-4 max-w-7xl mx-auto w-full z-10">
+
+    <!-- Hero -->
+    <div class="text-center mb-12 sm:mb-16 w-full animate-fade-in">
+      <div class="inline-block mb-4 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur text-xs font-medium text-purple-300 tracking-widest">
+        AI • MOVIE RECOMMENDER
+      </div>
+
+      <h1 class="hero-title text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-tight mb-6 font-cairo tracking-tighter">
+        DISCOVER YOUR NEXT <br class="hidden sm:block"/>
+        <span class="gradient-text relative inline-block">
+          OBSESSION
+          <svg class="absolute w-full h-4 -bottom-2 left-0 opacity-40" viewBox="0 0 300 12" fill="none"><path d="M2 10c30 0 40-12 80-12 50 0 70 18 120 18 50 0 70-15 98 0" stroke="currentColor" stroke-width="4"/></svg>
+        </span>
+      </h1>
+
+      <p class="text-base sm:text-lg md:text-xl text-gray-400 mb-10 max-w-3xl mx-auto font-light leading-relaxed px-4">
+Stop scrolling. Type a movie you love and get a personalized watchlist instantly.
+      </p>
+
+      <!-- Search Box -->
+      <div class="relative w-full max-w-xl lg:max-w-2xl mx-auto group">
+        <form method="POST" autocomplete="off">
+          <div class="glass-input rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-2xl">
+            <svg class="w-6 h-6 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            
+            <input id="movieInput" type="text" name="movie" placeholder="Search for Your Film ..."
+              class="w-full bg-transparent text-white placeholder-gray-500 text-base sm:text-lg font-medium font-cairo focus:outline-none" required autocomplete="off"/>
+
+            <button type="submit" class="bg-white text-black font-bold px-6 sm:px-8 py-3 rounded-xl hover:bg-gray-100 transition transform hover:scale-105 shadow-lg">
+              Go
+            </button>
+          </div>
+        </form>
+
+        <!-- Suggestions Dropdown -->
+        <div id="suggestionsBox" class="hidden absolute top-full left-0 right-0 mt-3 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl custom-dropdown z-50">
+          <!-- JS fills this -->
+        </div>
+      </div>
+
+      <!-- Same JS for autocomplete -->
+      <script>
+        const allMovies = [{% if all_movies %}{% for m in all_movies %}"{{ m }}",{% endfor %}{% endif %}];
+        const input = document.getElementById('movieInput');
+        const suggestionsBox = document.getElementById('suggestionsBox');
+
+        input.addEventListener('input', () => {
+          const val = input.value.trim().toLowerCase();
+          suggestionsBox.innerHTML = '';
+          if (!val) return suggestionsBox.classList.add('hidden');
+
+          const matches = allMovies.filter(m => m.toLowerCase().includes(val)).slice(0, 12);
+          if (matches.length === 0) return suggestionsBox.classList.add('hidden');
+
+          suggestionsBox.classList.remove('hidden');
+          matches.forEach(movie => {
+            const item = document.createElement('div');
+            item.className = "px-6 py-4 hover:bg-purple-600/30 hover:text-white cursor-pointer transition flex items-center gap-3 border-b border-white/5 last:border-0 font-cairo";
+            item.innerHTML = `<svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg> ${movie}`;
+            item.onclick = () => { input.value = movie; suggestionsBox.classList.add('hidden'); };
+            suggestionsBox.appendChild(item);
+          });
+        });
+
+        document.addEventListener('click', e => {
+          if (!input.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.classList.add('hidden');
+          }
+        });
+      </script>
+
+      <!-- Did you Mean ? Section -->
+      {% if suggestions %}
+      <div class="mt-16 w-full animate-slide-up">
+        <h3 class="text-xl sm:text-2xl font-bold font-cairo text-center mb-8 text-purple-300">Do You Mean?</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          {% for s in suggestions %}
+          <form method="POST" class="h-full">
+            <input type="hidden" name="movie" value="{{ s.title }}">
+            <button type="submit" class="movie-card w-full rounded-2xl overflow-hidden glass-panel border border-white/10 group">
+              <div class="aspect-[2/3] relative overflow-hidden">
+                <img src="{{ s.poster }}" alt="{{ s.title }}" 
+                     class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 image-loading" 
+                     loading="lazy"
+                     onload="this.classList.add('loaded'); this.classList.remove('image-loading', 'image-error')"
+                     onerror="this.classList.remove('image-loading'); this.classList.add('image-error'); this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9InVybCgjZ3JhZGllbnQpIi8+PHRleHQgeD0iMjAwIiB5PSIzMDAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPsCfjKvDlyBGaWxtPC90ZXh0PjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwIiB5MT0iMCIgeDI9IjQwMCIgeTI9IjYwMCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiM2NjdlZWEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3NjRiYTIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4='"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                <div class="absolute bottom-4 left-4 right-4 text-left">
+                  <h4 class="font-bold text-sm sm:text-base text-white font-cairo line-clamp-2">{{ s.title }}</h4>
+                  <div class="flex justify-between items-center mt-2 text-xs">
+                    <span class="bg-white/20 px-2 py-1 rounded">{{ s.year }}</span>
+                    <span class="text-yellow-400">★ {{ s.rating }}</span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          </form>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Results Grid -->
+      {% if recommendations %}
+      <div class="w-full mt-20 pb-20 animate-slide-up">
+        <h2 class="text-3xl sm:text-5xl font-black font-cairo mb-10 text-center bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          Movies picked for you.
+        </h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5 sm:gap-8">
+          {% for movie in recommendations %}
+          <div class="movie-card group rounded-2xl overflow-hidden glass-panel border border-white/10">
+            <div class="aspect-[2/3] relative overflow-hidden">
+              <img src="{{ movie.poster }}" alt="{{ movie.title }}" 
+                   class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 image-loading" 
+                   loading="lazy"
+                   onload="this.classList.add('loaded'); this.classList.remove('image-loading', 'image-error')"
+                   onerror="this.classList.remove('image-loading'); this.classList.add('image-error'); this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9InVybCgjZ3JhZGllbnQpIi8+PHRleHQgeD0iMjAwIiB5PSIzMDAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPsCfjKvDlyBGaWxtPC90ZXh0PjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwIiB5MT0iMCIgeDI9IjQwMCIgeTI9IjYwMCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiM2NjdlZWEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3NjRiYTIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4='"/>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition"></div>
+              <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                <div class="w-16 h-16 rounded-full bg-white/20 backdrop-blur border border-white/30 flex items-center justify-center">
+                  <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <h3 class="font-bold text-white truncate font-cairo group-hover:text-purple-300 transition">{{ movie.title }}</h3>
+              <div class="flex justify-between text-xs text-gray-400 mt-2">
+                <span>{{ movie.year }}</span>
+                <span class="text-yellow-400">★ {{ movie.rating }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 bg-black/50 backdrop-blur-2xl mt-auto">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
+      <p class="text-gray-500 text-sm">© 2025 AI Cinema • Made with Love</p>
+      <div class="flex items-center gap-4">
+        <span class="text-gray-500 text-xs uppercase">Developed by</span>
+        <span class="text-white font-bold font-cairo">Osama Hamada</span>
+        <span class="text-purple-400 text-xs">v1.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const images = document.querySelectorAll('.movie-card img');
+      
+      images.forEach(img => {
+        if (img.complete) {
+          if (img.naturalHeight === 0) {
+            img.classList.remove('image-loading');
+            img.classList.add('image-error');
+          } else {
+            img.classList.add('loaded');
+            img.classList.remove('image-loading');
+          }
+        }
+      });
+      
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1 && node.matches && node.matches('.movie-card img')) {
+                node.classList.add('image-loading');
+              }
+            });
+          }
+        });
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    });
+  </script>
+</body>
+</html>
