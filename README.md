@@ -23,7 +23,6 @@ Then open the app in your browser at:
 
 ## Structure
 
-* **data/** – movie datasets
 * **artifacts/** – models and similarity files
 * **app.py** – main web application
 * **notebook/movie-recommender.ipynb** – Jupyter Notebook with preprocessing and recommendation examples
